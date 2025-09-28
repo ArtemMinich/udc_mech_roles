@@ -1,0 +1,146 @@
+{
+  "players": [
+    {
+      "nickname": "I love mephedrone",
+      "preferences": [],
+      "role_assignments": {}
+    },
+    {
+      "nickname": "Flau",
+      "preferences": [],
+      "role_assignments": {}
+    },
+    {
+      "nickname": "Marceliy",
+      "preferences": [],
+      "role_assignments": {
+        "Механік-водій (Бронетранспортер)": 1
+      }
+    },
+    {
+      "nickname": "sn0pp1_",
+      "preferences": [],
+      "role_assignments": {}
+    },
+    {
+      "nickname": "Lucka_Guardian",
+      "preferences": [],
+      "role_assignments": {}
+    },
+    {
+      "nickname": "Ogyr4_ik",
+      "preferences": [],
+      "role_assignments": {}
+    },
+    {
+      "nickname": "Ангелинка",
+      "preferences": [],
+      "role_assignments": {}
+    },
+    {
+      "nickname": "ShreK",
+      "preferences": [],
+      "role_assignments": {}
+    },
+    {
+      "nickname": "Naer",
+      "preferences": [],
+      "role_assignments": {}
+    },
+    {
+      "nickname": "Marinnenkko",
+      "preferences": [],
+      "role_assignments": {}
+    },
+    {
+      "nickname": "doctorx",
+      "preferences": [],
+      "role_assignments": {}
+    },
+    {
+      "nickname": "Retrofeik",
+      "preferences": [],
+      "role_assignments": {}
+    },
+    {
+      "nickname": "bilka",
+      "preferences": [],
+      "role_assignments": {
+        "Гренадер": 1
+      }
+    },
+    {
+      "nickname": "arche33a",
+      "preferences": [],
+      "role_assignments": {}
+    },
+    {
+      "nickname": "John Cook",
+      "preferences": [],
+      "role_assignments": {}
+    },
+    {
+      "nickname": "murdermk6",
+      "preferences": [],
+      "role_assignments": {}
+    },
+    {
+      "nickname": "s1",
+      "preferences": [],
+      "role_assignments": {}
+    },
+    {
+      "nickname": "fdsb",
+      "preferences": [],
+      "role_assignments": {}
+    },
+    {
+      "nickname": "fsdfs",
+      "preferences": [],
+      "role_assignments": {}
+    }
+  ],
+  "roles": [
+    {
+      "name": "Медик",
+      "priority": 0
+    },
+    {
+      "name": "Механік-водій (Бронетранспортер)",
+      "priority": 2
+    },
+    {
+      "name": "Гранатометник",
+      "priority": 3
+    },
+    {
+      "name": "Гренадер",
+      "priority": 4
+    },
+    {
+      "name": "Стрілець (Бронетранспортер)",
+      "priority": 5
+    },
+    {
+      "name": "Водій (Польова гармата)",
+      "priority": 6
+    },
+    {
+      "name": "Стрілець-навідник (Польова гармата)",
+      "priority": 7
+    },
+    {
+      "name": "Механік-водій (Міномет)",
+      "priority": 8
+    },
+    {
+      "name": "Стрілець-навідник (Міномет)",
+      "priority": 9
+    },
+    {
+      "name": "Спотер (Міномет)",
+      "priority": 10
+    }
+  ],
+  "version": "1.0"
+}
