@@ -1,16 +1,22 @@
 import os
+import sys
 from datetime import datetime
 
-from PySide6.QtWidgets import QMessageBox
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
+
+def resource_path(relative_path: str) -> str:
+    try:
+        # PyInstaller створює тимчасову папку _MEIPASS
+        base_path = sys._MEIPASS
+    except AttributeError:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
 
 # ---------------- CONFIG ----------------
 SPREADSHEET_ID = "1vjwB8_4nWp-7BTqo8hBTYuXvPXmRT6MBXQGvsDY8jT0"
 SHEET_RANGE = "Відповіді форми (1)"
-SERVICE_KEY_FILE = os.path.join("resources", "service_account.json")
-
-
+SERVICE_KEY_FILE = resource_path("resources/service_account.json")
 # ----------------------------------------
 
 class FormService:
