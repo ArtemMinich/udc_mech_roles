@@ -131,8 +131,12 @@ class MainWindow(QMainWindow):
             data = FormService.fetch_responses()
             for nickname, preferences in data.items():
                 try:
-                    PlayerService.add_player(nickname,nickname)
+                    for index, role in enumerate(preferences):
+                        if role not in RoleService.list_roles():
+                            RoleService.add_role(role)
+                    PlayerService.add_player(nickname,preferences)
                 except ValueError:
+                    print(nickname, preferences)
                     PlayerService.update_player(nickname,nickname,preferences)
         except Exception as e:
             QMessageBox.critical(self, "Помилка", f"Не вдалося зчитати дані:\n{e}")
