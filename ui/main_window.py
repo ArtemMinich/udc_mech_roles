@@ -111,10 +111,10 @@ class MainWindow(QMainWindow):
             for role, nick in result.items():
                 if nick:
                     role_count = PlayerService.get_role_assignment_count(nick, role)
-                    txt += f"🎯 {role}: {nick} (тепер {role_count} разів на цій ролі)\n"
+                    txt += f"✅ {role}: {nick}\n"
                     successful_assignments += 1
                 else:
-                    txt += f"❌ {role}: (немає підходящего кандидата)\n"
+                    txt += f"❌ {role}: немає підходящого кандидата\n"
 
             txt += f"\nПризначено ролей: {successful_assignments}/{len(selected_roles)}"
             if successful_assignments < len(selected_roles):

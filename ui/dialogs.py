@@ -35,8 +35,8 @@ class PlayerDialog(QDialog):
         for r in self.existing_roles:
             it = QListWidgetItem(r)
             # Pre-select roles that player already has
-            it.setSelected(r in self.preferences)
             self.roles_list.addItem(it)
+            it.setSelected(r in self.preferences)
         v.addWidget(self.roles_list)
 
         h = QHBoxLayout()
@@ -79,8 +79,8 @@ class RoleAssignDialog(QDialog):
         for player in self.players:
             it = QListWidgetItem(player)
             # Pre-select players who already have this role
-            it.setSelected(player in self.current_assignments)
             self.players_list.addItem(it)
+            it.setSelected(player in self.current_assignments)
 
         v.addWidget(self.players_list)
 
@@ -119,9 +119,12 @@ class AssignDialog(QDialog):
         splitter = QSplitter(Qt.Horizontal)
 
         # Left side - Roles
-        roles_widget = self._create_roles_widget()
+        roles_widget = self._create_base_multi_selection_widget("Оберіть ролі для призначення:", self.roles)
+        self.roles_list = roles_widget.list_widget  # Зберігаємо посилання
+
         # Right side - Players
-        players_widget = self._create_players_widget()
+        players_widget = self._create_base_multi_selection_widget("Оберіть гравців для участі:", self.players)
+        self.players_list = players_widget.list_widget  # Зберігаємо посилання
 
         # Add widgets to splitter
         splitter.addWidget(roles_widget)
@@ -141,35 +144,66 @@ class AssignDialog(QDialog):
         v.addLayout(h)
         self.setLayout(v)
 
-    def _create_roles_widget(self):
-        """Create the roles selection widget."""
-        from PySide6.QtWidgets import QWidget
-        roles_widget = QWidget()
-        roles_layout = QVBoxLayout()
-        roles_layout.addWidget(QLabel("Оберіть ролі для призначення:"))
-        self.roles_list = QListWidget()
-        self.roles_list.setSelectionMode(QAbstractItemView.MultiSelection)
-        for r in self.roles:
-            it = QListWidgetItem(r)
-            self.roles_list.addItem(it)
-        roles_layout.addWidget(self.roles_list)
-        roles_widget.setLayout(roles_layout)
-        return roles_widget
+    def _create_base_multi_selection_widget(self, label, list):
+        from PySide6.QtWidgets import QWidget, QCheckBox
+        from PySide6.QtCore import Qt
 
-    def _create_players_widget(self):
-        """Create the players selection widget."""
-        from PySide6.QtWidgets import QWidget
-        players_widget = QWidget()
-        players_layout = QVBoxLayout()
-        players_layout.addWidget(QLabel("Оберіть гравців для участі:"))
-        self.players_list = QListWidget()
-        self.players_list.setSelectionMode(QAbstractItemView.MultiSelection)
-        for p in self.players:
+        widget = QWidget()
+        layout = QVBoxLayout()
+        layout.addWidget(QLabel(label))
+
+        # Чекбокс для вибору всіх елементів
+        select_all_checkbox = QCheckBox("Обрати все")
+        layout.addWidget(select_all_checkbox)
+
+        list_widget = QListWidget()
+        list_widget.setSelectionMode(QAbstractItemView.MultiSelection)
+        for p in list:
             it = QListWidgetItem(p)
-            self.players_list.addItem(it)
-        players_layout.addWidget(self.players_list)
-        players_widget.setLayout(players_layout)
-        return players_widget
+            list_widget.addItem(it)
+
+        # Використовуємо lambda для прив'язки до конкретного віджета
+        select_all_checkbox.stateChanged.connect(
+            lambda state, lw=list_widget: self._on_select_all_changed(lw, state)
+        )
+
+        list_widget.itemSelectionChanged.connect(
+            lambda lw=list_widget, cb=select_all_checkbox: self._update_select_all_checkbox(lw, cb)
+        )
+
+        layout.addWidget(list_widget)
+        widget.setLayout(layout)
+
+        # Зберігаємо посилання на віджети для подальшого використання
+        widget.list_widget = list_widget
+        widget.select_all_checkbox = select_all_checkbox
+
+        return widget
+
+    def _on_select_all_changed(self,list_widget, state):
+        """Обирає або знімає вибір з усіх елементів"""
+        for i in range(list_widget.count()):
+            item = list_widget.item(i)
+            item.setSelected(state == 2)  # 2 = Qt.Checked
+
+    def _update_select_all_checkbox(self,list_widget, checkbox):
+        """Оновлює стан чекбоксу в залежності від вибраних елементів"""
+        from PySide6.QtCore import Qt
+
+        total = list_widget.count()
+        selected = len(list_widget.selectedItems())
+
+        # Блокуємо сигнал, щоб не викликати _on_select_all_changed
+        checkbox.blockSignals(True)
+
+        if selected == 0:
+            checkbox.setCheckState(Qt.Unchecked)
+        elif selected == total:
+            checkbox.setCheckState(Qt.Checked)
+        else:
+            checkbox.setCheckState(Qt.PartiallyChecked)
+
+        checkbox.blockSignals(False)
 
     def get_selected_data(self) -> Tuple[List[str], List[str]]:
         """Returns (selected_roles, selected_players)."""

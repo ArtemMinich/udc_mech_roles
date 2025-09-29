@@ -65,3 +65,27 @@ class RoleService:
                 "UPDATE roles SET priority=? WHERE name=?",
                 (i, name)
             )
+
+    @staticmethod
+    def get_role_player_counts() -> dict:
+        """Get count of players who have each role in their preferences."""
+        import json
+
+        # Get all players with their preferences
+        rows = db_manager.execute_query(
+            "SELECT preferences FROM players",
+            fetch_all=True
+        )
+
+        role_counts = {}
+
+        for row in rows:
+            if row['preferences']:
+                try:
+                    preferences = json.loads(row['preferences'])
+                    for role in preferences:
+                        role_counts[role] = role_counts.get(role, 0) + 1
+                except (json.JSONDecodeError, TypeError):
+                    continue
+
+        return role_counts

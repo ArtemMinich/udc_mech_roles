@@ -6,9 +6,11 @@ import sqlite3
 from typing import List, Dict
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QTableWidget,
-    QTableWidgetItem, QMessageBox, QLabel, QHeaderView, QInputDialog
+    QTableWidgetItem, QMessageBox, QLabel, QHeaderView, QInputDialog,
+    QMenu
 )
 from PySide6.QtWidgets import QDialog
+from PySide6.QtCore import Qt
 
 from services.player_service import PlayerService
 from services.role_service import RoleService
@@ -30,8 +32,18 @@ class PlayersTab(QWidget):
 
         # Player table
         self.table = QTableWidget(0, 2)
-        self.table.setHorizontalHeaderLabels(["Nickname", "Preferences"])
+        self.table.setHorizontalHeaderLabels(["Ім'я", "Обрані ролі"])
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
+        self.table.setEditTriggers(QTableWidget.NoEditTriggers)
+
+        # Auto-resize columns to content
+        header = self.table.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.ResizeToContents)
+
+        # Enable context menu
+        self.table.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.table.customContextMenuRequested.connect(self.show_players_context_menu)
+
         v.addWidget(self.table)
 
         # CRUD buttons
@@ -47,6 +59,10 @@ class PlayersTab(QWidget):
         del_p = QPushButton("Видалити гравця")
         del_p.clicked.connect(self.delete_player_ui)
         hb.addWidget(del_p)
+
+        clear_all_p = QPushButton("Очистити всі ролі")
+        clear_all_p.clicked.connect(self.clear_all_preferences_ui)
+        hb.addWidget(clear_all_p)
 
         hb.addStretch()
         v.addLayout(hb)
@@ -86,6 +102,9 @@ class PlayersTab(QWidget):
             try:
                 PlayerService.add_player(nick, prefs)
                 self.refresh()
+                # Refresh roles tab to update player counts
+                if hasattr(self.parent_window, 'roles_tab'):
+                    self.parent_window.roles_tab.refresh()
             except ValueError as e:
                 QMessageBox.warning(self, "Error", str(e))
 
@@ -112,6 +131,9 @@ class PlayersTab(QWidget):
                     return
                 PlayerService.update_player(nickname, newnick, prefs)
                 self.refresh()
+                # Refresh roles tab to update player counts
+                if hasattr(self.parent_window, 'roles_tab'):
+                    self.parent_window.roles_tab.refresh()
         except ValueError as e:
             QMessageBox.warning(self, "Error", str(e))
 
@@ -125,6 +147,52 @@ class PlayersTab(QWidget):
         if QMessageBox.question(self, "Confirm", f"Delete {nickname}?") == QMessageBox.Yes:
             PlayerService.delete_player(nickname)
             self.refresh()
+            # Refresh roles tab to update player counts
+            if hasattr(self.parent_window, 'roles_tab'):
+                self.parent_window.roles_tab.refresh()
+
+    def clear_all_preferences_ui(self):
+        """UI for clearing all role preferences from all players."""
+        reply = QMessageBox.question(
+            self, 
+            "Підтвердження", 
+            "Ви впевнені, що хочете очистити всі обрані ролі у всіх гравців?\n"
+            "Цю дію неможливо скасувати.",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+
+        if reply == QMessageBox.Yes:
+            PlayerService.clear_all_preferences()
+            self.refresh()
+            # Refresh roles tab to update player counts
+            if hasattr(self.parent_window, 'roles_tab'):
+                self.parent_window.roles_tab.refresh()
+            QMessageBox.information(self, "Успіх", "Всі обрані ролі було очищено у всіх гравців")
+
+    def show_players_context_menu(self, position):
+        """Show context menu for players table."""
+        menu = QMenu(self)
+
+        # Add player action
+        add_action = menu.addAction("Додати гравця")
+        add_action.triggered.connect(self.add_player_ui)
+
+        # Edit and delete actions only if row is selected
+        if self.table.itemAt(position):
+            edit_action = menu.addAction("Редагувати гравця")
+            edit_action.triggered.connect(self.edit_player_ui)
+
+            delete_action = menu.addAction("Видалити гравця")
+            delete_action.triggered.connect(self.delete_player_ui)
+
+        menu.addSeparator()
+
+        # Clear all preferences action
+        clear_action = menu.addAction("Очистити всі ролі")
+        clear_action.triggered.connect(self.clear_all_preferences_ui)
+
+        menu.exec_(self.table.mapToGlobal(position))
 
 
 class RolesTab(QWidget):
@@ -147,14 +215,18 @@ class RolesTab(QWidget):
 
         # Role table with drag & drop
         self.table = DraggableTableWidget(self)
-        self.table.setColumnCount(2)
-        self.table.setHorizontalHeaderLabels(["Role Name", "Priority"])
+        self.table.setColumnCount(3)
+        self.table.setHorizontalHeaderLabels(["Назва ролі", "Пріоритет", "Кількість гравців"])
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
+        self.table.setEditTriggers(QTableWidget.NoEditTriggers)
 
-        # Make priority column narrow
+        # Auto-resize all columns to content
         header = self.table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.Stretch)
-        header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(QHeaderView.ResizeToContents)
+
+        # Enable context menu
+        self.table.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.table.customContextMenuRequested.connect(self.show_roles_context_menu)
 
         v.addWidget(self.table)
 
@@ -180,11 +252,17 @@ class RolesTab(QWidget):
         """Refresh the roles table."""
         self.table.setRowCount(0)
         roles = RoleService.list_roles_with_priority()
+        role_player_counts = RoleService.get_role_player_counts()
+
         for r in roles:
             row = self.table.rowCount()
             self.table.insertRow(row)
             self.table.setItem(row, 0, QTableWidgetItem(r.name))
             self.table.setItem(row, 1, QTableWidgetItem(str(r.priority)))
+
+            # Add player count for this role
+            player_count = role_player_counts.get(r.name, 0)
+            self.table.setItem(row, 2, QTableWidgetItem(str(player_count)))
 
     def on_roles_reordered(self):
         """Called when roles are reordered via drag & drop."""
@@ -231,6 +309,8 @@ class RolesTab(QWidget):
             # Refresh both tabs
             if hasattr(self.parent_window, 'players_tab'):
                 self.parent_window.players_tab.refresh()
+            # Also refresh roles tab to update player counts
+            self.refresh()
 
     def add_role_ui(self):
         """UI for adding a new role."""
@@ -255,3 +335,21 @@ class RolesTab(QWidget):
             # Refresh players tab if it exists
             if hasattr(self.parent_window, 'players_tab'):
                 self.parent_window.players_tab.refresh()
+
+    def show_roles_context_menu(self, position):
+        """Show context menu for roles table."""
+        menu = QMenu(self)
+
+        # Add role action
+        add_action = menu.addAction("Додати роль")
+        add_action.triggered.connect(self.add_role_ui)
+
+        # Assign and delete actions only if row is selected
+        if self.table.itemAt(position):
+            assign_action = menu.addAction("Призначити роль людям")
+            assign_action.triggered.connect(self.assign_role_to_players_ui)
+
+            delete_action = menu.addAction("Видалити роль")
+            delete_action.triggered.connect(self.delete_role_ui)
+
+        menu.exec_(self.table.mapToGlobal(position))

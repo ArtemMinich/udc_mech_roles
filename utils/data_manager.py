@@ -79,7 +79,7 @@ class DataManager:
                 PlayerService.add_player(p['nickname'], p.get('preferences', []))
                 players_count += 1
             except Exception:
-                # skip duplicates or errors
+                PlayerService.update_player(p['nickname'], p['nickname'], p.get('preferences', []))
                 pass
 
         return players_count, roles_count

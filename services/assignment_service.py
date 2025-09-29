@@ -55,11 +55,21 @@ class AssignmentService:
                 assigned[role] = None
                 continue
 
-            # choose candidate with minimal (len(preferences), role_specific_assignments)
+            # choose candidate with optimal score
             def score(nick):
                 p = players_map[nick]
+                num_preferences = len(p.preferences)
                 role_count = p.get_role_assignment_count(role)
-                return (len(p.preferences), role_count)
+
+                # Якщо у гравця тільки одна преференція - він може грати тільки її
+                # Даємо йому низький пріоритет тільки якщо він вже багато разів на цій ролі
+                if num_preferences == 1:
+                    return (0, role_count, 0)  # Сортуємо тільки по кількості разів на ролі
+
+                # Якщо у гравця багато преференцій - намагаємось розподілити його на різні ролі
+                # Чим більше преференцій, тим більше можливостей дати йому іншу роль
+                # Чим більше разів на цій конкретній ролі - тим менший пріоритет
+                return (1, role_count, num_preferences)
 
             cands_sorted = sorted(cands, key=score)
             chosen = cands_sorted[0]

@@ -142,3 +142,11 @@ class PlayerService:
             return player.get_role_assignment_count(role)
         except ValueError:
             return 0
+
+    @staticmethod
+    def clear_all_preferences() -> None:
+        """Clear all role preferences for all players."""
+        db_manager.execute_query(
+            "UPDATE players SET preferences = '[]', role_assignments = '{}'",
+            ()
+        )
