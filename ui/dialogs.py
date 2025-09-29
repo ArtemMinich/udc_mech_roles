@@ -15,7 +15,7 @@ class PlayerDialog(QDialog):
 
     def __init__(self, parent=None, nickname: str = "", preferences: List[str] = None, existing_roles: List[str] = None):
         super().__init__(parent)
-        self.setWindowTitle("Player")
+        self.setWindowTitle("Гравець")
         self.resize(400, 300)
         self.nickname = nickname
         self.preferences = preferences or []
@@ -25,11 +25,11 @@ class PlayerDialog(QDialog):
     def _init_ui(self):
         """Initialize the user interface."""
         v = QVBoxLayout()
-        v.addWidget(QLabel("Nickname:"))
+        v.addWidget(QLabel("Нікнейм:"))
         self.nick_edit = QLineEdit(self.nickname)
         v.addWidget(self.nick_edit)
 
-        v.addWidget(QLabel("Preferences (select multiple):"))
+        v.addWidget(QLabel("Уподобання (виберіть кілька):"))
         self.roles_list = QListWidget()
         self.roles_list.setSelectionMode(QAbstractItemView.MultiSelection)
         for r in self.existing_roles:
@@ -40,9 +40,9 @@ class PlayerDialog(QDialog):
         v.addWidget(self.roles_list)
 
         h = QHBoxLayout()
-        ok = QPushButton("OK")
+        ok = QPushButton("Готово")
         ok.clicked.connect(self.accept)
-        cancel = QPushButton("Cancel")
+        cancel = QPushButton("Скасувати")
         cancel.clicked.connect(self.reject)
         h.addWidget(ok)
         h.addWidget(cancel)
@@ -104,7 +104,7 @@ class AssignDialog(QDialog):
 
     def __init__(self, parent=None, roles: List[str] = None, players: List[str] = None):
         super().__init__(parent)
-        self.setWindowTitle("Assign Roles")
+        self.setWindowTitle("Призначення ролей")
         self.resize(600, 400)
         self.roles = roles or []
         self.players = players or []
