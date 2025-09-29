@@ -45,8 +45,8 @@ class AssignmentService:
                 num_preferences = len(p.preferences)
                 role_count = p.get_role_assignment_count(role)
                 if num_preferences == 1:
-                    return (0, role_count, 0)
-                return (1, role_count, num_preferences)
+                    return 0, role_count, 0
+                return 1, role_count, num_preferences
 
             cands_sorted = sorted(cands, key=score)
             assigned_for_role = cands_sorted[:count_needed]

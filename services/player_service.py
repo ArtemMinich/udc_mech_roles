@@ -4,6 +4,7 @@ Player service for managing player operations.
 
 import json
 import sqlite3
+from datetime import datetime
 from typing import List, Dict
 from models.player import Player
 from database.db_manager import db_manager
@@ -126,7 +127,10 @@ class PlayerService:
             assignments_dict = {}
 
         # Increment counter for this role
-        assignments_dict[role] = assignments_dict.get(role, 0) + 1
+        today = datetime.now().strftime("%d.%m.%y")
+
+        count, _ = assignments_dict.get(role, (0, ""))  # отримуємо старе значення або (0,"")
+        assignments_dict[role] = (count + 1, today)
 
         # Save back to database
         db_manager.execute_query(
@@ -147,6 +151,6 @@ class PlayerService:
     def clear_all_preferences() -> None:
         """Clear all role preferences for all players."""
         db_manager.execute_query(
-            "UPDATE players SET preferences = '[]', role_assignments = '{}'",
+            "UPDATE players SET preferences = '[]'",
             ()
         )

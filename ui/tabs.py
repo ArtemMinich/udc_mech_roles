@@ -3,7 +3,7 @@
 """
 
 import sqlite3
-from typing import List, Dict
+from typing import List, Dict, Tuple
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QTableWidget,
     QTableWidgetItem, QMessageBox, QLabel, QHeaderView, QInputDialog,
@@ -68,12 +68,13 @@ class PlayersTab(QWidget):
         v.addLayout(hb)
         self.setLayout(v)
 
-    def format_preferences_with_counts(self, preferences: List[str], role_assignments: Dict[str, int]) -> str:
+    def format_preferences_with_counts(self, preferences: List[str], role_assignments: Dict[str, Tuple[int, str]]) -> str:
         """Форматує обрані ролі з кількістю призначень у дужках."""
         formatted = []
         for role in preferences:
-            count = role_assignments.get(role, 0)
-            formatted.append(f"{role} ({count})")
+            count = role_assignments.get(role, [0, ""])[0]
+            date = role_assignments.get(role, [0, ""])[1]
+            formatted.append(f"{role} ({count}{f' - {date}'if date!=''else '' })")
         return ', '.join(formatted)
 
     def refresh(self):
