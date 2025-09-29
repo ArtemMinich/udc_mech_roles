@@ -7,6 +7,8 @@ from PySide6.QtWidgets import (
     QMessageBox, QTabWidget
 )
 from PySide6.QtWidgets import QDialog
+
+from services.form_service import FormService
 from services.player_service import PlayerService
 from services.role_service import RoleService
 from services.assignment_service import AssignmentService
@@ -62,6 +64,10 @@ class MainWindow(QMainWindow):
         top_buttons.addWidget(assign_btn)
 
         top_buttons.addStretch()
+
+        form_update_btn = QPushButton("Завантажити з опитування")
+        form_update_btn.clicked.connect(self.fetch_from_form)
+        top_buttons.addWidget(form_update_btn)
 
         # Import/Export buttons
         export_btn = QPushButton("Експортувати дані")
@@ -119,6 +125,19 @@ class MainWindow(QMainWindow):
 
             QMessageBox.information(self, "Результат призначення", txt)
             self.refresh_all()
+
+    def fetch_from_form(self):
+        try:
+            data = FormService.fetch_responses()
+            for nickname, preferences in data.items():
+                try:
+                    PlayerService.add_player(nickname,nickname)
+                except ValueError:
+                    PlayerService.update_player(nickname,nickname,preferences)
+        except Exception as e:
+            QMessageBox.critical(self, "Помилка", f"Не вдалося зчитати дані:\n{e}")
+
+        self.refresh_all()
 
     def export_data(self):
         """Export data to JSON file."""
