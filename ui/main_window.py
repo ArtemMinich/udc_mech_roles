@@ -94,7 +94,10 @@ class MainWindow(QMainWindow):
 
         dlg = AssignDialog(self, roles=roles, players=player_nicknames)
         if dlg.exec() == QDialog.Accepted:
-            selected_roles, selected_players = dlg.get_selected_data()
+            selected_data = dlg.get_selected_data()
+            selected_roles = selected_data["roles"]
+            role_counts = selected_data["role_counts"]
+            selected_players = selected_data["players"]
 
             if not selected_roles:
                 QMessageBox.warning(self, "Error", "Оберіть хоча б одну роль")
@@ -103,22 +106,16 @@ class MainWindow(QMainWindow):
                 QMessageBox.warning(self, "Error", "Оберіть хоча б одного гравця")
                 return
 
-            result = AssignmentService.assign_roles(selected_roles, selected_players)
+            result = AssignmentService.assign_roles(role_counts, selected_players)
 
             # Show result
             txt = "Результати призначення:\n\n"
-            successful_assignments = 0
-            for role, nick in result.items():
-                if nick:
-                    role_count = PlayerService.get_role_assignment_count(nick, role)
-                    txt += f"✅ {role}: {nick}\n"
-                    successful_assignments += 1
+            for role, players in result.items():
+                if players:
+                    txt += f"✅ {role}: {', '.join(players)}\n"
                 else:
                     txt += f"❌ {role}: немає підходящого кандидата\n"
-
-            txt += f"\nПризначено ролей: {successful_assignments}/{len(selected_roles)}"
-            if successful_assignments < len(selected_roles):
-                txt += "\n\nПорада: Перевірте преференції обраних гравців"
+            txt += f"\nПризначено ролей: {len(result)}"
 
             QMessageBox.information(self, "Результат призначення", txt)
             self.refresh_all()

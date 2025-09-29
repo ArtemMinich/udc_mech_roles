@@ -5,7 +5,7 @@ Dialog windows for the clan role manager application.
 from typing import List, Tuple
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QLineEdit,
-    QListWidget, QListWidgetItem, QAbstractItemView, QSplitter
+    QListWidget, QListWidgetItem, QAbstractItemView, QSplitter, QWidget, QSpinBox, QCheckBox
 )
 from PySide6.QtCore import Qt
 
@@ -99,6 +99,27 @@ class RoleAssignDialog(QDialog):
         return [w.text() for w in self.players_list.selectedItems()]
 
 
+class RoleSelectorWidget(QWidget):
+    def __init__(self, role_name):
+        super().__init__()
+        self.role_name = role_name
+        layout = QHBoxLayout()
+        self.checkbox = QCheckBox(role_name)
+        self.spinbox = QSpinBox()
+        self.spinbox.setMinimum(1)
+        self.spinbox.setMaximum(99)
+        self.spinbox.setEnabled(False)
+        self.checkbox.stateChanged.connect(self.spinbox.setEnabled)
+        layout.addWidget(self.checkbox)
+        layout.addWidget(self.spinbox)
+        self.setLayout(layout)
+
+    def is_selected(self):
+        return self.checkbox.isChecked()
+
+    def count(self):
+        return self.spinbox.value()
+
 class AssignDialog(QDialog):
     """Dialog to select both roles and players."""
 
@@ -111,26 +132,26 @@ class AssignDialog(QDialog):
         self._init_ui()
 
     def _init_ui(self):
-        """Initialize the user interface."""
-        # Main layout
         v = QVBoxLayout()
-
-        # Create splitter for side-by-side layout
         splitter = QSplitter(Qt.Horizontal)
 
-        # Left side - Roles
-        roles_widget = self._create_base_multi_selection_widget("Оберіть ролі для призначення:", self.roles)
-        self.roles_list = roles_widget.list_widget  # Зберігаємо посилання
+        # Left side - Roles with checkboxes and counters
+        roles_widget = QWidget()
+        roles_layout = QVBoxLayout()
+        self.role_selectors = []
+        for role in self.roles:
+            selector = RoleSelectorWidget(role)
+            self.role_selectors.append(selector)
+            roles_layout.addWidget(selector)
+        roles_widget.setLayout(roles_layout)
 
-        # Right side - Players
+        # Right side - Players (залишити як було)
         players_widget = self._create_base_multi_selection_widget("Оберіть гравців для участі:", self.players)
-        self.players_list = players_widget.list_widget  # Зберігаємо посилання
+        self.players_list = players_widget.list_widget
 
-        # Add widgets to splitter
         splitter.addWidget(roles_widget)
         splitter.addWidget(players_widget)
-        splitter.setSizes([300, 300])  # Equal sizes
-
+        splitter.setSizes([300, 300])
         v.addWidget(splitter)
 
         # Buttons
@@ -153,7 +174,7 @@ class AssignDialog(QDialog):
         layout.addWidget(QLabel(label))
 
         # Чекбокс для вибору всіх елементів
-        select_all_checkbox = QCheckBox("Обрати все")
+        select_all_checkbox = QCheckBox("Обрати всіх")
         layout.addWidget(select_all_checkbox)
 
         list_widget = QListWidget()
@@ -205,8 +226,14 @@ class AssignDialog(QDialog):
 
         checkbox.blockSignals(False)
 
-    def get_selected_data(self) -> Tuple[List[str], List[str]]:
-        """Returns (selected_roles, selected_players)."""
-        selected_roles = [w.text() for w in self.roles_list.selectedItems()]
+    def get_selected_data(self):
+        selected_roles = {
+            selector.role_name: selector.count()
+            for selector in self.role_selectors if selector.is_selected()
+        }
         selected_players = [w.text() for w in self.players_list.selectedItems()]
-        return selected_roles, selected_players
+        return {
+            "roles": list(selected_roles.keys()),
+            "role_counts": selected_roles,
+            "players": selected_players
+        }
