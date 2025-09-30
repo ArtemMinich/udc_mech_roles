@@ -129,15 +129,22 @@ class MainWindow(QMainWindow):
     def fetch_from_form(self):
         try:
             data = FormService.fetch_responses()
+            add_people = []
+            update_people = []
             for nickname, preferences in data.items():
                 try:
                     for index, role in enumerate(preferences):
                         if role not in RoleService.list_roles():
                             RoleService.add_role(role)
                     PlayerService.add_player(nickname,preferences)
+                    add_people.append(nickname)
                 except ValueError:
-                    print(nickname, preferences)
-                    PlayerService.update_player(nickname,nickname,preferences)
+                    if PlayerService.get_player(nickname).preferences != preferences:
+                        PlayerService.update_player(nickname,nickname,preferences)
+                        update_people.append(nickname)
+            add_people_msg = ', '.join(add_people) if add_people else '-'
+            update_people_msg = ', '.join(update_people) if update_people else '-'
+            QMessageBox.information(self, "Успішно", f"Дані завантажено!\nДодано: {add_people_msg}\nОновлено: {update_people_msg}")
         except Exception as e:
             QMessageBox.critical(self, "Помилка", f"Не вдалося зчитати дані:\n{e}")
 
