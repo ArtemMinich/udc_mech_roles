@@ -4,13 +4,17 @@
 
 import sqlite3
 from typing import List, Dict, Tuple
+
+import easyocr
+from PySide6 import QtGui
+from PySide6.QtGui import QShortcut, QKeySequence
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QTableWidget,
     QTableWidgetItem, QMessageBox, QLabel, QHeaderView, QInputDialog,
-    QMenu
+    QMenu, QApplication, QProgressBar
 )
 from PySide6.QtWidgets import QDialog
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QThread, Signal
 
 from services.player_service import PlayerService
 from services.role_service import RoleService
@@ -370,3 +374,89 @@ class RolesTab(QWidget):
             delete_action.triggered.connect(self.delete_role_ui)
 
         menu.exec_(self.table.mapToGlobal(position))
+
+
+class OCRThread(QThread):
+    progress = Signal(int)       # сигнал прогресу (0-100)
+    finished = Signal(list)      # сигнал результатів
+
+    def __init__(self, reader, img_path):
+        super().__init__()
+        self.reader = reader
+        self.img_path = img_path
+
+    def run(self):
+        results = self.reader.readtext(self.img_path)
+        total = len(results)
+        for i, r in enumerate(results):
+            percent = int((i + 1) / total * 100)
+            self.progress.emit(percent)
+        self.finished.emit(results)
+
+class DetectionNicksTab(QWidget):
+    """Вкладка для детекції нікнеймів зі скріншота Discord."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._init_ui()
+        self.reader = easyocr.Reader(['en', 'uk'])
+
+    def _init_ui(self):
+        v = QVBoxLayout()
+
+        self.info_label = QLabel("Вставте скріншот (Ctrl+V)")
+        self.info_label.setAlignment(Qt.AlignCenter)
+        self.info_label.setStyleSheet("color: #555; font-style: italic;")
+        v.addWidget(self.info_label)
+
+        self.image_label = QLabel()
+        self.image_label.setAlignment(Qt.AlignCenter)
+        self.image_label.setStyleSheet("border: 1px dashed #aaa; min-height: 200px;")
+        v.addWidget(self.image_label)
+
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setValue(0)
+        self.progress_bar.setVisible(False)
+        v.addWidget(self.progress_bar)
+
+        self.results_table = QTableWidget(0, 2)
+        self.results_table.setHorizontalHeaderLabels(["Нік", "Ймовірність"])
+        self.results_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+        v.addWidget(self.results_table)
+
+        self.setLayout(v)
+
+        # Глобальний Ctrl+V
+        paste_shortcut = QShortcut(QKeySequence("Ctrl+V"), self)
+        paste_shortcut.activated.connect(self.paste_image)
+
+    def paste_image(self):
+        """Вставка з буфера та запуск OCR."""
+        clipboard = QApplication.clipboard()
+        pixmap = clipboard.pixmap()
+        if not pixmap.isNull():
+            self.image_label.setPixmap(pixmap.scaledToWidth(400, Qt.SmoothTransformation))
+            tmp_path = "clipboard.png"
+            pixmap.save(tmp_path, "PNG")
+            self.run_ocr(tmp_path)
+
+    def run_ocr(self, img_path: str):
+        """Запуск OCR у окремому потоці з прогрес-баром."""
+        self.progress_bar.setValue(0)
+        self.progress_bar.setVisible(True)
+
+        self.ocr_thread = OCRThread(self.reader, img_path)
+        self.ocr_thread.progress.connect(self.progress_bar.setValue)
+        self.ocr_thread.finished.connect(self.show_results)
+        self.ocr_thread.start()
+
+    def show_results(self, results):
+        """Вивід результатів OCR у таблицю з перевіркою [UKR]."""
+        self.progress_bar.setVisible(False)
+        self.results_table.setRowCount(0)
+        for box, text, prob in results:
+            if text.startswith("[UKR]"):
+                row = self.results_table.rowCount()
+                self.results_table.insertRow(row)
+                self.results_table.setItem(row, 0, QTableWidgetItem(text))
+                self.results_table.setItem(row, 1, QTableWidgetItem(f"{prob:.2f}"))

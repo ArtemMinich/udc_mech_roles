@@ -13,7 +13,7 @@ from services.player_service import PlayerService
 from services.role_service import RoleService
 from services.assignment_service import AssignmentService
 from ui.dialogs import AssignDialog
-from ui.tabs import PlayersTab, RolesTab
+from ui.tabs import PlayersTab, RolesTab, DetectionNicksTab
 from utils.data_manager import DataManager
 
 
@@ -49,6 +49,10 @@ class MainWindow(QMainWindow):
         # Roles tab
         self.roles_tab = RolesTab(self)
         self.tabs.addTab(self.roles_tab, "Керування ролями")
+
+        # DetectionNicks tab
+        self.detection_nicks_tab = DetectionNicksTab(self)
+        self.tabs.addTab(self.detection_nicks_tab, "Зчитування ніків")
 
         layout.addWidget(self.tabs)
         main_widget.setLayout(layout)
