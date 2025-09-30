@@ -246,7 +246,6 @@ class RoleSelectDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Вибір ролей")
         self.resize(400, 300)
-        self.roles = RoleService.list_roles()
         self.preselected = preselected or []
         self._init_ui()
 
@@ -254,14 +253,13 @@ class RoleSelectDialog(QDialog):
         v = QVBoxLayout()
         v.addWidget(QLabel("Оберіть ролі:"))
 
-        self.checkboxes = []
-        for role in self.roles:
-            cb = QCheckBox(role)
-            if role in self.preselected:
-                cb.setChecked(True)
-            self.checkboxes.append(cb)
-            v.addWidget(cb)
+        self.list_widget = QListWidget()
+        self.list_widget.setSelectionMode(QAbstractItemView.MultiSelection)
+        for role in self.preselected:
+            it = QListWidgetItem(role)
+            self.list_widget.addItem(it)
 
+        v.addWidget(self.list_widget)
         # Кнопки
         h = QHBoxLayout()
         ok = QPushButton("Готово")
@@ -276,4 +274,4 @@ class RoleSelectDialog(QDialog):
 
     def get_selected_roles(self) -> List[str]:
         """Return list of selected roles."""
-        return [cb.text() for cb in self.checkboxes if cb.isChecked()]
+        return [cb.text() for cb in self.list_widget.selectedItems()]
