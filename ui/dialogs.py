@@ -9,6 +9,8 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 
+from services.role_service import RoleService
+
 
 class PlayerDialog(QDialog):
     """Dialog for adding/editing players."""
@@ -237,3 +239,41 @@ class AssignDialog(QDialog):
             "role_counts": selected_roles,
             "players": selected_players
         }
+class RoleSelectDialog(QDialog):
+    """Dialog to select roles only."""
+
+    def __init__(self, parent=None,preselected: List[str] = None):
+        super().__init__(parent)
+        self.setWindowTitle("Вибір ролей")
+        self.resize(400, 300)
+        self.roles = RoleService.list_roles()
+        self.preselected = preselected or []
+        self._init_ui()
+
+    def _init_ui(self):
+        v = QVBoxLayout()
+        v.addWidget(QLabel("Оберіть ролі:"))
+
+        self.checkboxes = []
+        for role in self.roles:
+            cb = QCheckBox(role)
+            if role in self.preselected:
+                cb.setChecked(True)
+            self.checkboxes.append(cb)
+            v.addWidget(cb)
+
+        # Кнопки
+        h = QHBoxLayout()
+        ok = QPushButton("Готово")
+        ok.clicked.connect(self.accept)
+        cancel = QPushButton("Скасувати")
+        cancel.clicked.connect(self.reject)
+        h.addWidget(ok)
+        h.addWidget(cancel)
+        v.addLayout(h)
+
+        self.setLayout(v)
+
+    def get_selected_roles(self) -> List[str]:
+        """Return list of selected roles."""
+        return [cb.text() for cb in self.checkboxes if cb.isChecked()]

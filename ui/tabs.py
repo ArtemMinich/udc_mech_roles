@@ -14,7 +14,7 @@ from PySide6.QtCore import Qt
 
 from services.player_service import PlayerService
 from services.role_service import RoleService
-from ui.dialogs import PlayerDialog, RoleAssignDialog
+from ui.dialogs import PlayerDialog, RoleAssignDialog, RoleSelectDialog
 from ui.widgets import DraggableTableWidget
 
 
@@ -59,6 +59,10 @@ class PlayersTab(QWidget):
         del_p = QPushButton("Видалити гравця")
         del_p.clicked.connect(self.delete_player_ui)
         hb.addWidget(del_p)
+
+        add_role_assignment_p = QPushButton("Додати призначення")
+        add_role_assignment_p.clicked.connect(self.add_role_assignment_ui)
+        hb.addWidget(add_role_assignment_p)
 
         clear_all_p = QPushButton("Очистити всі ролі")
         clear_all_p.clicked.connect(self.clear_all_preferences_ui)
@@ -150,6 +154,29 @@ class PlayersTab(QWidget):
             if hasattr(self.parent_window, 'roles_tab'):
                 self.parent_window.roles_tab.refresh()
 
+    def add_role_assignment_ui(self):
+        """Видалення гравця через UI."""
+        sel = self.table.selectedItems()
+        if not sel:
+            QMessageBox.warning(self, "Помилка", "Виберіть рядок.")
+            return
+        nickname = sel[0].text()
+        try:
+            player = PlayerService.get_player(nickname)
+            dlg = RoleSelectDialog(
+                self,
+                preselected=player.preferences
+            )
+            if dlg.exec() == QDialog.Accepted:
+                selected = dlg.get_selected_roles()
+                for role in selected:
+                    PlayerService.increment_role_assignment(player.nickname, role)
+                self.refresh()
+                if hasattr(self.parent_window, 'roles_tab'):
+                    self.parent_window.roles_tab.refresh()
+        except ValueError as e:
+            QMessageBox.warning(self, "Помилка", str(e))
+
     def clear_all_preferences_ui(self):
         """Очистити всі обрані ролі у всіх гравців."""
         reply = QMessageBox.question(
@@ -182,6 +209,10 @@ class PlayersTab(QWidget):
 
             delete_action = menu.addAction("Видалити гравця")
             delete_action.triggered.connect(self.delete_player_ui)
+
+            delete_action = menu.addAction("Додати призначення")
+            delete_action.triggered.connect(self.add_role_assignment_ui)
+
 
         menu.addSeparator()
 
