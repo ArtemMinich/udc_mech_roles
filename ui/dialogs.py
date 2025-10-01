@@ -125,12 +125,13 @@ class RoleSelectorWidget(QWidget):
 class AssignDialog(QDialog):
     """Dialog to select both roles and players."""
 
-    def __init__(self, parent=None, roles: List[str] = None, players: List[str] = None):
+    def __init__(self, detection_niks: List[str]=None, parent=None, roles: List[str] = None, players: List[str] = None):
         super().__init__(parent)
         self.setWindowTitle("Призначення ролей")
         self.resize(600, 400)
         self.roles = roles or []
         self.players = players or []
+        self.detection_niks = detection_niks or []
         self._init_ui()
 
     def _init_ui(self):
@@ -151,6 +152,11 @@ class AssignDialog(QDialog):
         players_widget = self._create_base_multi_selection_widget("Оберіть гравців для участі:", self.players)
         self.players_list = players_widget.list_widget
 
+        # Додаємо кнопку для активації розпізнаних
+        activate_btn = QPushButton("Активувати розпізнаних")
+        activate_btn.clicked.connect(self._activate_detected_players)
+        players_widget.layout().addWidget(activate_btn)
+
         splitter.addWidget(roles_widget)
         splitter.addWidget(players_widget)
         splitter.setSizes([300, 300])
@@ -166,6 +172,14 @@ class AssignDialog(QDialog):
         h.addWidget(cancel)
         v.addLayout(h)
         self.setLayout(v)
+
+    def _activate_detected_players(self):
+        """Виділяє тих гравців, які є у detection_niks"""
+        detection_set = set(self.detection_niks)
+        for i in range(self.players_list.count()):
+            item = self.players_list.item(i)
+            if item.text() in detection_set:
+                item.setSelected(True)
 
     def _create_base_multi_selection_widget(self, label, list):
         from PySide6.QtWidgets import QWidget, QCheckBox

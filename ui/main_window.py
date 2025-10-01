@@ -22,6 +22,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
+        self.detection_nicks = []
         self.setWindowTitle("Clan Role Manager")
         self.resize(800, 600)
         self._init_ui()
@@ -52,10 +53,14 @@ class MainWindow(QMainWindow):
 
         # DetectionNicks tab
         self.detection_nicks_tab = DetectionNicksTab(self)
+        self.detection_nicks_tab.nicksParsed.connect(self.handle_nick_detection)
         self.tabs.addTab(self.detection_nicks_tab, "Зчитування ніків")
 
         layout.addWidget(self.tabs)
         main_widget.setLayout(layout)
+
+    def handle_nick_detection(self, nicks: list[str]):
+        self.detection_nicks = nicks
 
     def _create_top_buttons(self):
         """Create the top row of buttons."""
@@ -102,7 +107,7 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Error", "No players defined")
             return
 
-        dlg = AssignDialog(self, roles=roles, players=player_nicknames)
+        dlg = AssignDialog(detection_niks=self.detection_nicks, parent=self, roles=roles, players=player_nicknames)
         if dlg.exec() == QDialog.Accepted:
             selected_data = dlg.get_selected_data()
             selected_roles = selected_data["roles"]

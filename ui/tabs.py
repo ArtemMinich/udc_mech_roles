@@ -11,7 +11,7 @@ from PySide6.QtGui import QShortcut, QKeySequence
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QTableWidget,
     QTableWidgetItem, QMessageBox, QLabel, QHeaderView, QInputDialog,
-    QMenu, QApplication, QProgressBar
+    QMenu, QApplication, QProgressBar, QScrollArea
 )
 from PySide6.QtWidgets import QDialog
 from PySide6.QtCore import Qt, QThread, Signal
@@ -20,6 +20,7 @@ from services.player_service import PlayerService
 from services.role_service import RoleService
 from ui.dialogs import PlayerDialog, RoleAssignDialog, RoleSelectDialog
 from ui.widgets import DraggableTableWidget
+from utils.image_viewer import ImageViewer
 
 
 class PlayersTab(QWidget):
@@ -396,6 +397,8 @@ class OCRThread(QThread):
 class DetectionNicksTab(QWidget):
     """Вкладка для детекції нікнеймів зі скріншота Discord."""
 
+    nicksParsed = Signal(list)
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self._init_ui()
@@ -404,29 +407,32 @@ class DetectionNicksTab(QWidget):
     def _init_ui(self):
         v = QVBoxLayout()
 
+        # Інфо-лейбл
         self.info_label = QLabel("Вставте скріншот (Ctrl+V)")
         self.info_label.setAlignment(Qt.AlignCenter)
         self.info_label.setStyleSheet("color: #555; font-style: italic;")
         v.addWidget(self.info_label)
 
-        self.image_label = QLabel()
-        self.image_label.setAlignment(Qt.AlignCenter)
-        self.image_label.setStyleSheet("border: 1px dashed #aaa; min-height: 200px;")
-        v.addWidget(self.image_label)
+        # Віджет для картинки з масштабуванням та скролом
+        self.image_viewer = ImageViewer()
+        self.image_viewer.setMinimumHeight(200)
+        v.addWidget(self.image_viewer, stretch=2)
 
+        # Прогрес-бар OCR
         self.progress_bar = QProgressBar()
         self.progress_bar.setValue(0)
         self.progress_bar.setVisible(False)
         v.addWidget(self.progress_bar)
 
+        # Таблиця з результатами OCR
         self.results_table = QTableWidget(0, 2)
         self.results_table.setHorizontalHeaderLabels(["Нік", "Ймовірність"])
         self.results_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
-        v.addWidget(self.results_table)
+        v.addWidget(self.results_table, stretch=1)
 
         self.setLayout(v)
 
-        # Глобальний Ctrl+V
+        # Глобальний Ctrl+V для вставки картинки
         paste_shortcut = QShortcut(QKeySequence("Ctrl+V"), self)
         paste_shortcut.activated.connect(self.paste_image)
 
@@ -435,7 +441,8 @@ class DetectionNicksTab(QWidget):
         clipboard = QApplication.clipboard()
         pixmap = clipboard.pixmap()
         if not pixmap.isNull():
-            self.image_label.setPixmap(pixmap.scaledToWidth(400, Qt.SmoothTransformation))
+            self.image_viewer.setPhoto(pixmap)
+
             tmp_path = "clipboard.png"
             pixmap.save(tmp_path, "PNG")
             self.run_ocr(tmp_path)
@@ -454,9 +461,19 @@ class DetectionNicksTab(QWidget):
         """Вивід результатів OCR у таблицю з перевіркою [UKR]."""
         self.progress_bar.setVisible(False)
         self.results_table.setRowCount(0)
+
+        nicks = []
+
         for box, text, prob in results:
             if text.startswith("[UKR]"):
+                clean_nick = text.replace("[UKR]", "").strip()
+                nicks.append(clean_nick)
+
                 row = self.results_table.rowCount()
                 self.results_table.insertRow(row)
-                self.results_table.setItem(row, 0, QTableWidgetItem(text))
+                self.results_table.setItem(row, 0, QTableWidgetItem(clean_nick))
                 self.results_table.setItem(row, 1, QTableWidgetItem(f"{prob:.2f}"))
+
+        self.nicksParsed.emit(nicks)
+
+
