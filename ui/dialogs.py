@@ -1,14 +1,18 @@
 """
 Dialog windows for the clan role manager application.
 """
+import json
+from typing import List, Tuple, Dict
 
-from typing import List, Tuple
+from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QLineEdit,
-    QListWidget, QListWidgetItem, QAbstractItemView, QSplitter, QWidget, QSpinBox, QCheckBox
+    QListWidget, QListWidgetItem, QAbstractItemView, QSplitter, QWidget, QSpinBox, QCheckBox, QDateEdit,
+    QTableWidgetItem, QTableWidget, QHeaderView
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QDate
 
+from services.player_service import PlayerService
 from services.role_service import RoleService
 
 
@@ -253,31 +257,74 @@ class AssignDialog(QDialog):
             "role_counts": selected_roles,
             "players": selected_players
         }
-class RoleSelectDialog(QDialog):
-    """Dialog to select roles only."""
+class RoleAssignmentDialog(QDialog):
+    """Dialog to edit role assignments (count + date) for a player."""
 
-    def __init__(self, parent=None,preselected: List[str] = None):
+    def __init__(self, parent=None, nickname: str = None):
         super().__init__(parent)
-        self.setWindowTitle("Вибір ролей")
-        self.resize(400, 300)
-        self.preselected = preselected or []
+        self.nickname = nickname
+        self.player = PlayerService.get_player(nickname)  # отримуємо гравця з БД
+        self.setWindowTitle(f"Редагування відвідування: {self.player.nickname}")
+        self.resize(650, 500)
+
+        # всі ролі з БД
+        self.all_roles = RoleService.list_roles()
         self._init_ui()
 
     def _init_ui(self):
         v = QVBoxLayout()
-        v.addWidget(QLabel("Оберіть ролі:"))
+        v.addWidget(QLabel(f"Призначення ролей для гравця: {self.player.nickname}"))
 
-        self.list_widget = QListWidget()
-        self.list_widget.setSelectionMode(QAbstractItemView.MultiSelection)
-        for role in self.preselected:
-            it = QListWidgetItem(role)
-            self.list_widget.addItem(it)
+        # Таблиця: роль | кількість | дата
+        self.table = QTableWidget(len(self.all_roles), 3)
+        self.table.setHorizontalHeaderLabels(["Роль", "Кількість", "Дата"])
+        self.table.resizeColumnsToContents()
+        self.table.resizeRowsToContents()
+        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.table.verticalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
 
-        v.addWidget(self.list_widget)
-        # Кнопки
+        for row, role in enumerate(self.all_roles):
+            # колонка 1: назва ролі
+            self.table.setItem(row, 0, QTableWidgetItem(role))
+
+            # колонка 2: кількість
+            count, date_str = self.player.role_assignments.get(role, (0, ""))
+            spin = QSpinBox()
+            spin.setMinimum(0)
+            spin.setMaximum(99)
+            spin.setValue(count)
+            self.table.setCellWidget(row, 1, spin)
+
+            # колонка 3: дата
+            date_edit = QDateEdit()
+            date_edit.setDisplayFormat("dd.MM.yy")
+            date_edit.setCalendarPopup(True)
+
+            if date_str:
+                try:
+                    day, month, year = map(int, date_str.split("."))
+                    if year < 100:  # скорочений рік → повний
+                        year += 2000
+                    qdate = QDate(year, month, day)
+                    date_edit.setDate(qdate)
+                except ValueError:
+                    date_edit.setDate(QDate.currentDate())
+            else:
+                date_edit.setDate(QDate.currentDate())
+
+            self.table.setCellWidget(row, 2, date_edit)
+
+            # підсвічування вподобань
+            if role in self.player.preferences:
+                self.table.item(row, 0).setBackground(QColor("#c6efce"))  # світло-зелений фон
+                self.table.item(row, 0).setForeground(QColor("#000000"))  # чорний текст
+
+        v.addWidget(self.table)
+
+        # кнопки
         h = QHBoxLayout()
-        ok = QPushButton("Готово")
-        ok.clicked.connect(self.accept)
+        ok = QPushButton("Зберегти")
+        ok.clicked.connect(self._save_and_close)
         cancel = QPushButton("Скасувати")
         cancel.clicked.connect(self.reject)
         h.addWidget(ok)
@@ -286,6 +333,32 @@ class RoleSelectDialog(QDialog):
 
         self.setLayout(v)
 
-    def get_selected_roles(self) -> List[str]:
-        """Return list of selected roles."""
-        return [cb.text() for cb in self.list_widget.selectedItems()]
+    def _collect_assignments(self) -> Dict[str, Tuple[int, str]]:
+        """Зібрати role_assignments із таблиці."""
+        assignments = {}
+        for row, role in enumerate(self.all_roles):
+            spin: QSpinBox = self.table.cellWidget(row, 1)
+            date_edit: QDateEdit = self.table.cellWidget(row, 2)
+
+            count = spin.value()
+            if count == 0:
+                continue
+            date_str = date_edit.date().toString("dd.MM.yy")
+
+            if count > 0 or date_str:
+                assignments[role] = (count, date_str)
+        return assignments
+
+    def _save_and_close(self):
+        """Зберегти зміни у PlayerService і закрити діалог."""
+        assignments = self._collect_assignments()
+
+        # оновлюємо role_assignments в БД
+        db_payload = json.dumps(assignments)
+        from database.db_manager import db_manager
+        db_manager.execute_query(
+            "UPDATE players SET role_assignments=? WHERE nickname=?",
+            (db_payload, self.nickname)
+        )
+
+        self.accept()

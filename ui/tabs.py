@@ -18,7 +18,7 @@ from PySide6.QtCore import Qt, QThread, Signal
 
 from services.player_service import PlayerService
 from services.role_service import RoleService
-from ui.dialogs import PlayerDialog, RoleAssignDialog, RoleSelectDialog
+from ui.dialogs import PlayerDialog, RoleAssignDialog, RoleAssignmentDialog
 from ui.widgets import DraggableTableWidget
 from utils.image_viewer import ImageViewer
 
@@ -65,7 +65,7 @@ class PlayersTab(QWidget):
         del_p.clicked.connect(self.delete_player_ui)
         hb.addWidget(del_p)
 
-        add_role_assignment_p = QPushButton("Додати призначення")
+        add_role_assignment_p = QPushButton("Редагувати відвідування")
         add_role_assignment_p.clicked.connect(self.add_role_assignment_ui)
         hb.addWidget(add_role_assignment_p)
 
@@ -167,15 +167,10 @@ class PlayersTab(QWidget):
             return
         nickname = sel[0].text()
         try:
-            player = PlayerService.get_player(nickname)
-            dlg = RoleSelectDialog(
-                self,
-                preselected=player.preferences
+            dlg = RoleAssignmentDialog(
+                self, nickname=nickname
             )
             if dlg.exec() == QDialog.Accepted:
-                selected = dlg.get_selected_roles()
-                for role in selected:
-                    PlayerService.increment_role_assignment(player.nickname, role)
                 self.refresh()
                 if hasattr(self.parent_window, 'roles_tab'):
                     self.parent_window.roles_tab.refresh()
@@ -215,7 +210,7 @@ class PlayersTab(QWidget):
             delete_action = menu.addAction("Видалити гравця")
             delete_action.triggered.connect(self.delete_player_ui)
 
-            delete_action = menu.addAction("Додати призначення")
+            delete_action = menu.addAction("Редагувати відвідування")
             delete_action.triggered.connect(self.add_role_assignment_ui)
 
 
